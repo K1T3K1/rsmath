@@ -1,13 +1,17 @@
-use std::ops::{Add, Sub, Mul, Div};
+use std::ops::{Add, Div, Mul, Sub};
+
 #[derive(Debug, PartialEq, PartialOrd, Clone)]
-struct Complex<T> {
+pub struct Complex<T> {
     re: T,
     im: T,
 }
 
-impl<T> Complex<T> where T: Add<Output = T> + Sub<Output = T> + Mul<Output = T> + Div<Output = T> + Clone + Copy, {
+impl<T> Complex<T>
+where
+    T: Add<Output = T> + Sub<Output = T> + Mul<Output = T> + Div<Output = T> + Clone + Copy,
+{
     #[inline]
-    fn add(&self, operand: &Complex<T>) -> Complex<T> {
+    pub fn add(&self, operand: &Complex<T>) -> Complex<T> {
         Complex {
             re: self.re + operand.re,
             im: self.im + operand.im,
@@ -15,7 +19,7 @@ impl<T> Complex<T> where T: Add<Output = T> + Sub<Output = T> + Mul<Output = T> 
     }
 
     #[inline]
-    fn substract(&self, operand: &Complex<T>) -> Complex<T> {
+    pub fn substract(&self, operand: &Complex<T>) -> Complex<T> {
         Complex {
             re: self.re - operand.re,
             im: self.im - operand.im,
@@ -23,7 +27,7 @@ impl<T> Complex<T> where T: Add<Output = T> + Sub<Output = T> + Mul<Output = T> 
     }
 
     #[inline]
-    fn multiply(&self, operand: &Complex<T>) -> Complex<T> {
+    pub fn multiply(&self, operand: &Complex<T>) -> Complex<T> {
         Complex {
             re: self.re * operand.re - self.im * operand.im,
             im: self.im * operand.re + self.re * operand.im,
@@ -31,7 +35,7 @@ impl<T> Complex<T> where T: Add<Output = T> + Sub<Output = T> + Mul<Output = T> 
     }
 
     #[inline]
-    fn divide(&self, operand: &Complex<T>) -> Complex<T> {
+    pub fn divide(&self, operand: &Complex<T>) -> Complex<T> {
         let divisor = operand.re * operand.re + operand.im * operand.im;
         Complex {
             re: (self.re * operand.re + self.im * operand.im) / divisor,
@@ -40,15 +44,15 @@ impl<T> Complex<T> where T: Add<Output = T> + Sub<Output = T> + Mul<Output = T> 
     }
 
     #[inline]
-    fn pow(&self, n: i32) -> Complex<T> {
+    pub fn pow(&self, n: i32) -> Complex<T> {
         match n {
             x if x == 1 => self.clone(),
-            _ => self.multiply(&self.pow(n - 1))
+            _ => self.multiply(&self.pow(n - 1)),
         }
     }
-
 }
 
+//  TESTS
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -94,13 +98,7 @@ mod tests {
         let cnum = Complex { re: 10.0, im: 10.0 };
         let op = Complex { re: 5.0, im: 5.0 };
         let res = cnum.divide(&op);
-        assert_eq!(
-            res,
-            Complex {
-                re: 2.0,
-                im: 0.0,
-            }
-        );
+        assert_eq!(res, Complex { re: 2.0, im: 0.0 });
     }
 
     #[test]
@@ -108,9 +106,6 @@ mod tests {
         let cnum = Complex { re: 10.0, im: 10.0 };
         let res = cnum.pow(2);
         let comp = cnum.multiply(&cnum.clone());
-        assert_eq!(
-            res,
-            comp
-        );
+        assert_eq!(res, comp);
     }
 }
