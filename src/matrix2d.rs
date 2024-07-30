@@ -1,5 +1,8 @@
-use num::Zero;
-use std::ops::{Add, Div, Index, IndexMut, Mul, Sub};
+use num::{FromPrimitive, Zero};
+use std::{
+    iter::{Product, Sum},
+    ops::{Add, Div, Index, IndexMut, Mul, Sub},
+};
 
 #[derive(Debug, PartialEq, PartialOrd, Clone, Eq, Ord)]
 pub struct Matrix2D<T> {
@@ -33,7 +36,18 @@ impl<T> IndexMut<usize> for Matrix2D<T> {
 
 impl<T> Matrix2D<T>
 where
-    T: Add<Output = T> + Sub<Output = T> + Mul<Output = T> + Div<Output = T> + Clone + Copy + Zero,
+    T: Add<Output = T>
+        + Sub<Output = T>
+        + Mul<Output = T>
+        + Div<Output = T>
+        + Clone
+        + Copy
+        + Zero
+        + Default
+        + FromPrimitive
+        + Sum
+        + Product
+        + std::fmt::Debug,
 {
     pub fn new(data: Vec<Vec<T>>) -> Result<Matrix2D<T>, Matrix2DError> {
         if data.is_empty() {
@@ -51,6 +65,16 @@ where
         }
 
         Ok(Matrix2D { width, data })
+    }
+
+    pub fn diag(size: usize, value: T) -> Self {
+        let mut data = vec![vec![T::zero(); size]; size];
+
+        for i in 0..size {
+            data[i][i] = value;
+        }
+
+        Matrix2D::new(data).unwrap()
     }
 
     pub fn mul(&self, operand: &Matrix2D<T>) -> Result<Matrix2D<T>, Matrix2DError> {
@@ -91,6 +115,22 @@ where
         .unwrap())
     }
 
+    pub fn substract(&self, operand: &Matrix2D<T>) -> Result<Matrix2D<T>, Matrix2DError> {
+        match self.is_additive(operand) {
+            false => return Err(Matrix2DError::NotAdditive),
+            _ => {}
+        }
+
+        Ok(Matrix2D::new(
+            self.data
+                .iter()
+                .zip(operand.data.iter())
+                .map(|(row1, row2)| row1.iter().zip(row2.iter()).map(|(a, b)| *a - *b).collect())
+                .collect(),
+        )
+        .unwrap())
+    }
+
     pub fn det(&self) -> Result<T, Matrix2DError> {
         match self.is_square() {
             false => return Err(Matrix2DError::NotSquare),
@@ -101,9 +141,40 @@ where
             return Ok(self[0][0]);
         }
 
-        // lacks impl
+        let (_, u) = self.lu_decomposition().unwrap();
 
-        todo!()
+        Ok(u.data
+            .iter()
+            .enumerate()
+            .map(|(idx, row)| row[idx])
+            .product())
+    }
+
+    pub fn lu_decomposition(&self) -> Result<(Matrix2D<T>, Matrix2D<T>), Matrix2DError> {
+        match self.is_square() {
+            false => return Err(Matrix2DError::NotSquare),
+            _ => {}
+        }
+
+        let mut l = Matrix2D::diag(self.width, T::from_i32(1).unwrap());
+        let mut u = Matrix2D::diag(self.width, T::from_i32(0).unwrap());
+        for i in 0..self.width {
+            for j in 0..self.width {
+                if i <= j {
+                    let sum = (0..i).map(|k| l[i][k] * u[k][j]).sum();
+                    u[i][j] = self[i][j] - sum;
+                } else {
+                    let sum = (0..j).map(|k| l[i][k] * u[k][j]).sum();
+                    l[i][j] = (self[i][j] - sum) / u[j][j];
+                }
+            }
+        }
+
+        for i in 0..self.width {
+            l[i][i] = T::from_u8(1).unwrap();
+        }
+
+        Ok((l, u))
     }
 
     #[inline]
@@ -196,5 +267,29 @@ mod tests {
                 .det(),
             Err(Matrix2DError::NotSquare)
         );
+    }
+
+    use ::rust_decimal_macros::dec;
+    #[test]
+    fn det_test() {
+        assert_eq!(
+            Matrix2D::new(vec![vec![dec!(5.0), dec!(7.0)], vec![dec!(7.0), dec!(9.0)]])
+                .unwrap()
+                .det(),
+            Ok(dec!(-4.0))
+        )
+    }
+
+    #[test]
+    fn lu_test() {
+        assert_eq!(
+            Matrix2D::new(vec![vec![dec!(5.0), dec!(7.0)], vec![dec!(7.0), dec!(9.0)]])
+                .unwrap()
+                .lu_decomposition().unwrap(),
+            (
+                Matrix2D::new(vec![vec![dec!(1.0), dec!(0.0)], vec![dec!(1.4), dec!(1.0)]]).unwrap(),
+                Matrix2D::new(vec![vec![dec!(5.0), dec!(7.0)], vec![dec!(0.0), dec!(-0.8)]]).unwrap()
+            )
+        )
     }
 }

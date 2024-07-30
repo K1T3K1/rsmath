@@ -5,3 +5,7 @@ edition = "2021"
 
 [dependencies]
 num = "0.4.3"
+
+[dev-dependencies]
+rust_decimal = "1.35.0"
+rust_decimal_macros = "1.35.0"
