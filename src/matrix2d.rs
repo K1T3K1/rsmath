@@ -6,7 +6,7 @@ use std::{
 
 #[derive(Debug, PartialEq, PartialOrd, Clone, Eq, Ord)]
 pub struct Matrix2D<T> {
-    data: Vec<Vec<T>>,
+    pub data: Vec<Vec<T>>,
     width: usize,
 }
 
@@ -18,6 +18,7 @@ pub enum Matrix2DError {
     EmptyMatrix,
     EmptyRow,
     InconsistentRowLength,
+    SingularMatrix,
 }
 
 impl<T> Index<usize> for Matrix2D<T> {
@@ -47,6 +48,8 @@ where
         + FromPrimitive
         + Sum
         + Product
+        + PartialEq
+        + PartialOrd
         + std::fmt::Debug,
 {
     pub fn new(data: Vec<Vec<T>>) -> Result<Matrix2D<T>, Matrix2DError> {
@@ -97,6 +100,16 @@ where
             width: result[0].len(),
             data: result,
         })
+    }
+
+    pub fn scalar_mult(&self, scalar: T) -> Matrix2D<T> {
+        Matrix2D::new(
+            self.data
+                .iter()
+                .map(|row| row.iter().map(|val| *val * scalar).collect())
+                .collect(),
+        )
+        .unwrap()
     }
 
     pub fn add(&self, operand: &Matrix2D<T>) -> Result<Matrix2D<T>, Matrix2DError> {
@@ -177,6 +190,21 @@ where
         Ok((l, u))
     }
 
+    pub fn inverse(&self) -> Result<Matrix2D<T>, Matrix2DError> {
+        match self.is_square() {
+            false => return Err(Matrix2DError::NotSquare),
+            _ => {}
+        }
+
+        match self.det() {
+            Ok(det) if det == T::zero() => return Err(Matrix2DError::SingularMatrix),
+            Err(e) => return Err(e),
+            _ => {}
+        }
+
+        todo!()
+    }
+
     #[inline]
     fn is_multiplicable(&self, operand: &Matrix2D<T>) -> bool {
         self.width == operand.data.len()
@@ -195,8 +223,6 @@ where
 //  TESTS
 #[cfg(test)]
 mod tests {
-    use std::vec;
-
     use super::*;
 
     #[test]
@@ -269,7 +295,7 @@ mod tests {
         );
     }
 
-    use ::rust_decimal_macros::dec;
+    use rust_decimal_macros::dec;
     #[test]
     fn det_test() {
         assert_eq!(
@@ -285,11 +311,27 @@ mod tests {
         assert_eq!(
             Matrix2D::new(vec![vec![dec!(5.0), dec!(7.0)], vec![dec!(7.0), dec!(9.0)]])
                 .unwrap()
-                .lu_decomposition().unwrap(),
+                .lu_decomposition()
+                .unwrap(),
             (
-                Matrix2D::new(vec![vec![dec!(1.0), dec!(0.0)], vec![dec!(1.4), dec!(1.0)]]).unwrap(),
-                Matrix2D::new(vec![vec![dec!(5.0), dec!(7.0)], vec![dec!(0.0), dec!(-0.8)]]).unwrap()
+                Matrix2D::new(vec![vec![dec!(1.0), dec!(0.0)], vec![dec!(1.4), dec!(1.0)]])
+                    .unwrap(),
+                Matrix2D::new(vec![
+                    vec![dec!(5.0), dec!(7.0)],
+                    vec![dec!(0.0), dec!(-0.8)]
+                ])
+                .unwrap()
             )
+        )
+    }
+
+    #[test]
+    fn scalar_mult_test() {
+        assert_eq!(
+            Matrix2D::new(vec![vec![2, 7], vec![3, 5]])
+                .unwrap()
+                .scalar_mult(5),
+            Matrix2D::new(vec![vec![10, 35], vec![15, 25]]).unwrap()
         )
     }
 }

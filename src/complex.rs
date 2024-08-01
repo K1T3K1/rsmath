@@ -1,14 +1,13 @@
-use std::ops::{Add, Div, Mul, Sub};
-
+use num::{FromPrimitive, Num};
 #[derive(Debug, PartialEq, PartialOrd, Clone)]
 pub struct Complex<T> {
-    re: T,
-    im: T,
+    pub re: T,
+    pub im: T,
 }
 
 impl<T> Complex<T>
 where
-    T: Add<Output = T> + Sub<Output = T> + Mul<Output = T> + Div<Output = T> + Clone + Copy,
+    T: Num + FromPrimitive + Copy,
 {
     #[inline]
     pub fn add(&self, operand: &Complex<T>) -> Complex<T> {
